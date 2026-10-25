@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jeopardy!</title>
+  <style>
+    :root {
+      --blue: #071f78;
+      --blue-light: #1239b2;
+      --gold: #ffcc35;
+      --ink: #f8f8ff;
+      --panel: #101938;
+      --danger: #d64444;
+      --good: #16864c;
+      --muted: #aab5d6;
+      --shadow: 0 12px 35px rgba(0, 0, 0, .35);
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: radial-gradient(circle at top, #18378f 0, #080e25 42rem, #050814 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    .hidden { display: none !important; }
+    .app { width: min(1500px, 100%); margin: auto; padding: 18px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .brand { margin: 0; color: var(--gold); font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 4.6rem); line-height: .9; text-shadow: 3px 4px #000; letter-spacing: -.04em; }
+    .stage-label { color: #fff; font-size: clamp(1rem, 2vw, 1.5rem); text-align: right; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .panel { background: rgba(12, 21, 53, .94); border: 1px solid #334b9a; border-radius: 16px; padding: clamp(16px, 3vw, 30px); box-shadow: var(--shadow); }
+    h2, h3 { margin-top: 0; }
+    .setup-grid { display: grid; grid-template-columns: minmax(280px, 620px); justify-content: center; gap: 22px; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-weight: 700; margin-bottom: 6px; }
+    input, textarea {
+      width: 100%; border: 1px solid #5064a2; border-radius: 8px; padding: 10px 12px;
+      color: #fff; background: #080e25; outline: none;
+    }
+    input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255, 204, 53, .16); }
+    input[type="number"] { font-variant-numeric: tabular-nums; }
+    textarea { min-height: 420px; resize: vertical; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .stack { display: grid; gap: 10px; }
+    .btn {
+      border: 1px solid #6578ba; border-radius: 8px; padding: 9px 14px; color: #fff;
+      background: #263b82; font-weight: 800; box-shadow: 0 3px 0 rgba(0,0,0,.25);
+    }
+    .btn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+    .btn.primary { color: #161100; background: var(--gold); border-color: #ffe183; }
+    .btn.good { background: var(--good); border-color: #49bd7f; }
+    .btn.danger { background: #9e2929; border-color: #ef7777; }
+    .btn.ghost { background: transparent; }
+    .btn.large { padding: 13px 22px; font-size: 1.08rem; }
+    .muted, .hint { color: var(--muted); }
+    .hint { font-size: .9rem; line-height: 1.45; }
+    .error { color: #ff9d9d; font-weight: 700; white-space: pre-wrap; }
+    .warning-box { margin: 18px 0; padding: 14px 16px; color: #ffd1d1; background: #681f2a; border: 2px solid #ff7f8d; border-radius: 10px; white-space: pre-wrap; }
+    .success { color: #6ee7a5; font-weight: 700; }
+    .players-editor { display: grid; gap: 9px; margin-bottom: 12px; }
+    .player-edit-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .scoreboard { display: grid; grid-template-columns: repeat(var(--player-count, 3), minmax(135px, 1fr)); gap: 10px; margin: 0 0 16px; overflow-x: auto; }
+    .score-card { min-width: 135px; text-align: center; background: #061c71; border: 2px solid #5972dd; border-radius: 11px; padding: 9px; box-shadow: 0 5px 15px #0005; }
+    .score-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+    .score-value { margin-top: 3px; color: var(--gold); font-family: Georgia, serif; font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 2px 2px #000; }
+    .board-wrap { width: 100%; overflow-x: auto; padding-bottom: 4px; }
+    .board { display: grid; grid-template-columns: repeat(var(--category-count, 5), minmax(140px, 1fr)); gap: 7px; min-width: calc(var(--category-count, 5) * 140px); background: #020716; padding: 7px; border-radius: 5px; box-shadow: var(--shadow); }
+    .category, .clue-tile { display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(145deg, #0a2b9c, #061c71); border: 2px solid #173fa8; }
+    .category { min-height: 92px; padding: 8px; font-weight: 900; text-transform: uppercase; text-shadow: 2px 2px #000; overflow-wrap: anywhere; }
+    .clue-tile { min-height: clamp(72px, 9vw, 116px); color: var(--gold); font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(1.7rem, 4vw, 3.6rem); text-shadow: 3px 3px #000; border-radius: 0; }
+    .clue-tile:hover:not(:disabled) { background: #164bd0; filter: none; transform: none; }
+    .clue-tile.used { color: transparent; background: #06165a; border-color: #112878; box-shadow: none; }
+    .round-footer { display: flex; justify-content: center; margin-top: 16px; }
+    .overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 18px; background: rgba(0, 3, 15, .88); backdrop-filter: blur(4px); }
+    .modal { width: min(950px, 100%); max-height: calc(100vh - 36px); overflow-y: auto; background: #0b1748; border: 3px solid #5573d9; border-radius: 17px; padding: clamp(18px, 4vw, 40px); box-shadow: 0 24px 80px #000; }
+    .modal.wide { width: min(1150px, 100%); }
+    .modal-head { display: flex; justify-content: space-between; align-items: start; gap: 15px; }
+    .modal-title { color: var(--gold); text-transform: uppercase; letter-spacing: .04em; }
+    .clue-text { display: grid; place-items: center; min-height: 190px; padding: 22px 10px; text-align: center; font-family: Georgia, serif; font-size: clamp(1.5rem, 4vw, 3rem); line-height: 1.25; }
+    .answer-box { margin: 10px 0 20px; padding: 18px; border: 2px solid var(--gold); border-radius: 10px; background: #060d2d; text-align: center; font-size: clamp(1.2rem, 2.5vw, 2rem); }
+    .host-answer-label { margin: 18px 0 6px; color: var(--gold); text-align: center; font-size: .82rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+    .display-status { color: var(--muted); font-size: .85rem; font-weight: 700; }
+    .display-status.connected { color: #6ee7a5; }
+    .audience-mode .app { width: min(1800px, 100%); }
+    .audience-mode .brand { font-size: clamp(2.4rem, 6vw, 5.5rem); }
+    .audience-mode .panel { min-height: 60vh; }
+    .audience-mode .clue-text { min-height: 42vh; font-size: clamp(2rem, 5vw, 4.8rem); }
+    .audience-mode .answer-box { font-size: clamp(1.8rem, 4vw, 3.8rem); }
+    .audience-mode .clue-tile { cursor: default; }
+    .scoring-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 16px 0; }
+    .scoring-player { border: 1px solid #435cae; border-radius: 10px; background: #0a1233; padding: 12px; text-align: center; }
+    .scoring-player .row { justify-content: center; margin-top: 8px; }
+    .daily-banner { color: var(--gold); font: 900 clamp(2rem, 8vw, 5rem)/1 Georgia, serif; text-align: center; text-shadow: 4px 4px #000; padding: 20px 5px; }
+    .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .final-timer { text-align: center; color: var(--gold); font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; font-variant-numeric: tabular-nums; margin: 16px 0; }
+    .final-timer.expired { color: #ff7777; }
+    .final-category { color: var(--gold); text-align: center; font: 800 clamp(1.8rem, 5vw, 3.5rem)/1.2 Georgia, serif; padding: 26px 10px; }
+    .wager-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0; }
+    .wager-card { border: 1px solid #435cae; border-radius: 10px; padding: 14px; background: #081236; }
+    .standings { display: grid; gap: 12px; margin: 22px auto; max-width: 700px; }
+    .standing { display: flex; justify-content: space-between; gap: 12px; padding: 15px 20px; border-radius: 9px; background: #091d65; font-size: 1.3rem; font-weight: 800; }
+    .standing:first-child { color: #1b1400; background: var(--gold); font-size: 1.55rem; }
+    dialog { color: var(--ink); background: #0b1748; border: 2px solid #5573d9; border-radius: 14px; padding: 22px; box-shadow: var(--shadow); }
+    dialog::backdrop { background: #000b; }
+    .manual-list { display: grid; gap: 10px; min-width: min(520px, 80vw); }
+    .manual-row { display: grid; grid-template-columns: minmax(100px, 1fr) 130px; gap: 10px; align-items: center; }
+    .rules-dialog { width: min(900px, calc(100vw - 28px)); max-height: calc(100vh - 36px); overflow-y: auto; }
+    .rules-dialog form { margin: 0; }
+    .rules-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+    .rules-head h2 { margin-bottom: 4px; }
+    .rules-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .rule-card { padding: 15px; border: 1px solid #435cae; border-radius: 10px; background: #081236; }
+    .rule-card h3 { margin-bottom: 8px; color: var(--gold); font-size: 1.05rem; }
+    .rule-card ul { margin: 0; padding-left: 20px; }
+    .rule-card li + li { margin-top: 7px; }
+    .house-rules { margin-top: 14px; padding: 14px 16px; border-left: 5px solid var(--gold); border-radius: 7px; background: #27200b; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 800px) {
+      .setup-grid { grid-template-columns: 1fr; }
+      textarea { min-height: 320px; }
+      .topbar { align-items: end; }
+      .scoreboard { grid-template-columns: repeat(var(--player-count, 3), minmax(120px, 1fr)); }
+      .rules-grid { grid-template-columns: 1fr; }
+      .app { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1 class="brand">JEOPARDY!</h1>
+      <div id="stageLabel" class="stage-label">Game Setup</div>
+    </header>
+
+    <section id="setupScreen" class="panel">
+      <div class="setup-grid">
+        <div>
+          <h2>Players</h2>
+          <div id="playersEditor" class="players-editor"></div>
+          <div class="row">
+            <button id="addPlayerBtn" class="btn" type="button">Add player</button>
+          </div>
+          <p class="hint">Set the players for this game. Questions and responses remain hidden from this screen.</p>
+          <div id="setupWarning" class="warning-box hidden" role="alert"></div>
+          <hr style="border-color:#334b9a; margin:24px 0">
+          <h3>Saved game</h3>
+          <p id="resumeText" class="hint">No saved game found.</p>
+          <div class="row">
+            <button id="resumeBtn" class="btn hidden" type="button">Resume saved game</button>
+            <button id="discardBtn" class="btn danger hidden" type="button">Discard save</button>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end; margin-top:22px">
+        <button id="startBtn" class="btn primary large" type="button">Start new game</button>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="hidden">
+      <div class="toolbar">
+        <div class="row">
+          <button id="rulesBtn" class="btn" type="button">Rules &amp; judging guide</button>
+          <button id="adjustBtn" class="btn" type="button">Adjust scores</button>
+          <button id="undoBtn" class="btn" type="button">Undo score</button>
+        </div>
+        <div class="row">
+          <button id="launchDisplayBtn" class="btn primary" type="button">Launch audience display</button>
+          <span id="displayStatus" class="display-status">Display not connected</span>
+          <button id="exportSaveBtn" class="btn ghost" type="button">Export save</button>
+          <button id="newGameBtn" class="btn danger" type="button">New game</button>
+        </div>
+      </div>
+      <div id="scoreboard" class="scoreboard" aria-label="Scores"></div>
+      <div id="boardArea"></div>
+    </section>
+  </main>
+
+  <div id="clueOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="clueTitle">
+    <section class="modal wide">
+      <div class="modal-head">
+        <h2 id="clueTitle" class="modal-title"></h2>
+        <div id="clueValue" class="modal-title"></div>
+      </div>
+      <div id="dailySetup"></div>
+      <div id="cluePlay" class="hidden">
+        <div id="clueText" class="clue-text"></div>
+        <div class="host-answer-label">Correct response · host only</div>
+        <div id="answerBox" class="answer-box"></div>
+        <div class="row" style="justify-content:center">
+          <button id="revealBtn" class="btn primary large" type="button">Reveal response to audience</button>
+        </div>
+        <div id="clueScoring" class="scoring-grid"></div>
+        <div class="row" style="justify-content:space-between; margin-top:18px">
+          <span id="clueStatus" class="hint" aria-live="polite"></span>
+          <div class="row">
+            <button id="clueUndoBtn" class="btn ghost" type="button" disabled>Undo this clue's last score</button>
+            <button id="closeClueBtn" class="btn large" type="button">Return to board</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="adjustDialog">
+    <form method="dialog">
+      <h2>Manual score adjustment</h2>
+      <p class="hint">Enter an amount to add. Use a negative number to subtract.</p>
+      <div id="manualList" class="manual-list"></div>
+      <label for="adjustReason" style="margin-top:14px">Note (optional)</label>
+      <input id="adjustReason" placeholder="Correction, bonus, etc.">
+      <div class="row" style="justify-content:flex-end; margin-top:18px">
+        <button class="btn ghost" value="cancel">Cancel</button>
+        <button id="applyAdjustBtn" class="btn primary" value="default">Apply adjustments</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="rulesDialog" class="rules-dialog">
+    <form method="dialog">
+      <div class="rules-head">
+        <div>
+          <h2>Rules &amp; judging guide</h2>
+          <div class="hint">Quick host rulings for the situations most likely to cause confusion.</div>
+        </div>
+        <button class="btn ghost" value="close" aria-label="Close rules">Close</button>
+      </div>
+
+      <div class="rules-grid">
+        <section class="rule-card">
+          <h3>1. Form of a question</h3>
+          <ul>
+            <li>Responses should be phrased as a question: “What is…?” or “Who is…?” Grammar does not need to be perfect.</li>
+            <li>In the first Jeopardy round, accept one lapse and remind the player. In Double Jeopardy, Daily Doubles, and Final Jeopardy, missing the question form is incorrect.</li>
+          </ul>
+        </section>
+
+        <section class="rule-card">
+          <h3>2. Buzzing, silence &amp; rebounds</h3>
+          <ul>
+            <li>Players should wait until the clue is fully read. The host decides who buzzed first.</li>
+            <li>No buzz means no penalty. Once recognized, an incorrect response or failure to answer loses the clue value.</li>
+            <li>After a wrong response, the other players may buzz in. Do not reveal the answer until everyone has declined or time expires.</li>
+          </ul>
+        </section>
+
+        <section class="rule-card">
+          <h3>3. What counts as correct?</h3>
+          <ul>
+            <li>The response must satisfy both the clue and its category. Category instructions such as “starts with B” are part of the clue.</li>
+            <li>A surname is usually enough when it identifies only one reasonable person. Say “Be more specific” when clarification is genuinely needed.</li>
+            <li>A player may correct themself until the host rules or time runs out. Extra information that contradicts the correct response makes it wrong.</li>
+          </ul>
+        </section>
+
+        <section class="rule-card">
+          <h3>4. Pronunciation &amp; spelling</h3>
+          <ul>
+            <li>Accept a spoken response that is recognizably the same answer, including a reasonable phonetic pronunciation.</li>
+            <li>Do not accept a change that adds or removes meaningful sounds, changes a title, or produces a different name or word.</li>
+            <li>Final Jeopardy spelling can be imperfect if it is phonetically correct, unless spelling is specifically tested.</li>
+          </ul>
+        </section>
+
+        <section class="rule-card">
+          <h3>5. Daily Doubles</h3>
+          <ul>
+            <li>Only the player who selected the clue may respond; there are no rebounds.</li>
+            <li>The wager is locked before the clue appears. This game allows $5 up to the greater of the player’s score or the highest clue value in that round.</li>
+            <li>A correct response adds the wager; an incorrect response or no response subtracts it.</li>
+          </ul>
+        </section>
+
+        <section class="rule-card">
+          <h3>6. Scoring &amp; board control</h3>
+          <ul>
+            <li>Correct responses add the clue value; incorrect recognized responses subtract it.</li>
+            <li>The last player to respond correctly chooses the next clue. After a triple stumper, the player who chose the previous clue keeps control.</li>
+            <li>If a ruling changes, use “Undo score” or “Adjust scores” before continuing.</li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="house-rules">
+        <strong>Final Jeopardy in this game:</strong> Only players with a positive score participate. Wagers range from $0 up to the greater of the player’s score or $1,000. Give players about 30 seconds; responses must be in question form. The host’s judgment is final, but consistency matters more than strictness in a home game.
+      </div>
+    </form>
+  </dialog>
+
+  <!-- <script src="questions.js"></script> -->
+  <script src="example-questions.js"></script>
+  <script>
+    "use strict";
+
+    const IS_AUDIENCE = location.hash === "#audience";
+
+    // Default game settings. Trivia content lives in questions.js.
+    const SAMPLE_CONFIG = {
+      "title": "Jeopardy!",
+      "players": ["Player 1", "Player 2", "Player 3"],
+      ...TRIVIA_QUESTIONS
+    };
+
+    const STORAGE_KEY = "selfContainedJeopardyStateV1";
+    const $ = (selector) => document.querySelector(selector);
+    const els = {
+      setup: $("#setupScreen"), game: $("#gameScreen"), stage: $("#stageLabel"),
+      playersEditor: $("#playersEditor"), setupWarning: $("#setupWarning"),
+      resumeBtn: $("#resumeBtn"), discardBtn: $("#discardBtn"), resumeText: $("#resumeText"),
+      scoreboard: $("#scoreboard"), boardArea: $("#boardArea"), clueOverlay: $("#clueOverlay"),
+      clueTitle: $("#clueTitle"), clueValue: $("#clueValue"), dailySetup: $("#dailySetup"),
+      cluePlay: $("#cluePlay"), clueText: $("#clueText"), revealBtn: $("#revealBtn"),
+      answerBox: $("#answerBox"), clueScoring: $("#clueScoring"), clueStatus: $("#clueStatus"),
+      adjustDialog: $("#adjustDialog"), manualList: $("#manualList"), adjustReason: $("#adjustReason")
+    };
+
+    let config = structuredCloneSafe(SAMPLE_CONFIG);
+    let state = null;
+    let activeClue = null;
+    let audienceWindow = null;
+
+    function structuredCloneSafe(value) { return JSON.parse(JSON.stringify(value)); }
+    function money(value) {
+      const number = Number(value) || 0;
+      return `${number < 0 ? "−" : ""}$${Math.abs(number).toLocaleString()}`;
+    }
+    function finalWagerMax(player) { return Math.max(player.score, 1000); }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[c]);
+    }
+    function downloadJson(data, filename) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+    }
+    function saveState() {
+      if (!state) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, state }));
+      updateSavedGameControls();
+      notifyAudience();
+    }
+    function loadSaved() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!parsed?.config || !parsed?.state) return null;
+        validateConfig(parsed.config);
+        return parsed;
+      } catch { return null; }
+    }
+    function updateSavedGameControls() {
+      const saved = loadSaved();
+      els.resumeBtn.classList.toggle("hidden", !saved);
+      els.discardBtn.classList.toggle("hidden", !saved);
+      els.resumeText.textContent = saved
+        ? `Saved ${saved.state.phase === "complete" ? "completed" : "in-progress"} game found.`
+        : "No saved game found.";
+    }
+
+    function validateConfig(candidate) {
+      const fail = message => { throw new Error(message); };
+      if (!candidate || typeof candidate !== "object") fail("Configuration must be a JSON object.");
+      if (!Array.isArray(candidate.players) || candidate.players.length < 1) fail("Add at least one player.");
+      if (candidate.players.some(name => typeof name !== "string" || !name.trim())) fail("Every player needs a non-empty name.");
+      if (!Array.isArray(candidate.rounds) || candidate.rounds.length !== 2) fail("Exactly two rounds are required: Jeopardy and Double Jeopardy.");
+      const expectedValues = [[100,200,300,400,500], [200,400,600,800,1000]];
+      candidate.rounds.forEach((round, r) => {
+        if (!round.name || !Array.isArray(round.categories) || round.categories.length !== 5) fail(`Round ${r + 1} needs exactly five categories.`);
+        round.categories.forEach((category, c) => {
+          if (!category.name || !Array.isArray(category.clues) || category.clues.length !== 5) fail(`Round ${r + 1}, category ${c + 1} needs a name and exactly five clues.`);
+          category.clues.forEach((clue, q) => {
+            if (!clue.clue || !clue.answer) fail(`Missing clue or answer in round ${r + 1}, category ${c + 1}, row ${q + 1}.`);
+            if (Number(clue.value) !== expectedValues[r][q]) fail(`Round ${r + 1}, category ${c + 1}, row ${q + 1} must be worth ${expectedValues[r][q]}.`);
+            if (clue.dailyDouble != null && typeof clue.dailyDouble !== "boolean") fail("dailyDouble must be true or false.");
+          });
+        });
+      });
+      const final = candidate.finalJeopardy;
+      if (!final?.category || !final?.clue || !final?.answer) fail("Final Jeopardy needs a category, clue, and answer.");
+      return true;
+    }
+
+    function renderPlayerEditor(names) {
+      els.playersEditor.innerHTML = "";
+      names.forEach((name, index) => {
+        const row = document.createElement("div");
+        row.className = "player-edit-row";
+        row.innerHTML = `<label class="sr-only" for="player-${index}">Player ${index + 1} name</label><input id="player-${index}" value="${escapeHtml(name)}" maxlength="40"><button class="btn danger" type="button" aria-label="Remove ${escapeHtml(name)}">Remove</button>`;
+        row.querySelector("button").addEventListener("click", () => {
+          const current = playerNamesFromEditor();
+          if (current.length === 1) return showSetupWarning("At least one player is required.");
+          current.splice(index, 1); renderPlayerEditor(current); validateSetupConfiguration();
+        });
+        els.playersEditor.append(row);
+      });
+    }
+    function playerNamesFromEditor() { return [...els.playersEditor.querySelectorAll("input")].map(input => input.value.trim()); }
+    function showSetupWarning(message = "") {
+      els.setupWarning.textContent = message;
+      els.setupWarning.classList.toggle("hidden", !message);
+    }
+    function configuredForPlayers() {
+      const candidate = structuredCloneSafe(config);
+      candidate.players = playerNamesFromEditor();
+      validateConfig(candidate);
+      return candidate;
+    }
+    function validateSetupConfiguration() {
+      try {
+        configuredForPlayers();
+        showSetupWarning();
+        $("#startBtn").disabled = false;
+        return true;
+      } catch (error) {
+        showSetupWarning(`Configuration warning: ${error.message}\nEdit questions.js if the problem is not a player name, then reload.`);
+        $("#startBtn").disabled = true;
+        return false;
+      }
+    }
+
+    function makeInitialState() {
+      return {
+        phase: "round", roundIndex: 0,
+        players: config.players.map((name, id) => ({ id, name, score: 0 })),
+        used: config.rounds.map(round => round.categories.map(category => category.clues.map(() => false))),
+        history: [], final: null
+      };
+    }
+    function startNewGame() {
+      try {
+        const candidate = configuredForPlayers();
+        if (candidate.players.some(name => !name)) throw new Error("Every player needs a name.");
+        config = candidate;
+        state = makeInitialState();
+        saveState(); showGame();
+      } catch (error) { showSetupWarning(`The game cannot start because its configuration is invalid:\n${error.message}`); }
+    }
+    function showSetup() {
+      stopFinalMusic();
+      els.game.classList.add("hidden"); els.setup.classList.remove("hidden");
+      els.stage.textContent = "Game Setup";
+      config = structuredCloneSafe(config || SAMPLE_CONFIG);
+      renderPlayerEditor(Array.isArray(config.players) && config.players.length ? config.players : ["Player 1"]);
+      validateSetupConfiguration();
+      updateSavedGameControls();
+    }
+    function showGame() {
+      els.setup.classList.add("hidden"); els.game.classList.remove("hidden");
+      renderGame();
+    }
+    function renderGame() {
+      renderScores();
+      $("#undoBtn").disabled = !state.history.length;
+      if (state.phase === "round") renderBoard();
+      else if (state.phase === "final") renderFinal();
+      else renderResults();
+      notifyAudience();
+    }
+    function renderScores() {
+      els.scoreboard.style.setProperty("--player-count", state.players.length);
+      els.scoreboard.innerHTML = state.players.map(player => `<div class="score-card"><div class="score-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</div><div class="score-value">${money(player.score)}</div></div>`).join("");
+    }
+    function renderBoard() {
+      const round = config.rounds[state.roundIndex];
+      els.stage.textContent = round.name;
+      const allUsed = state.used[state.roundIndex].every(category => category.every(Boolean));
+      const board = document.createElement("div");
+      board.className = "board"; board.style.setProperty("--category-count", round.categories.length);
+      round.categories.forEach(category => {
+        const heading = document.createElement("div"); heading.className = "category"; heading.textContent = category.name; board.append(heading);
+      });
+      for (let clueIndex = 0; clueIndex < 5; clueIndex++) {
+        round.categories.forEach((category, categoryIndex) => {
+          const clue = category.clues[clueIndex];
+          const used = state.used[state.roundIndex][categoryIndex][clueIndex];
+          const button = document.createElement("button");
+          button.type = "button"; button.className = `clue-tile${used ? " used" : ""}`; button.disabled = used;
+          button.textContent = used ? "" : money(clue.value);
+          button.setAttribute("aria-label", used ? `${category.name} for ${clue.value}, used` : `${category.name} for ${clue.value}`);
+          button.addEventListener("click", () => openClue(categoryIndex, clueIndex));
+          board.append(button);
+        });
+      }
+      const actionLabel = state.roundIndex === 0 ? "Continue to Double Jeopardy" : "Continue to Final Jeopardy";
+      els.boardArea.innerHTML = `<div class="board-wrap"></div><div class="round-footer"><button id="nextRoundBtn" class="btn primary large" type="button">${actionLabel}${allUsed ? "" : " (clues remain)"}</button></div>`;
+      els.boardArea.querySelector(".board-wrap").append(board);
+      $("#nextRoundBtn").addEventListener("click", advanceRound);
+    }
+    function advanceRound() {
+      const remaining = state.used[state.roundIndex].flat().filter(value => !value).length;
+      if (remaining && !confirm(`${remaining} clue${remaining === 1 ? " remains" : "s remain"}. Continue anyway?`)) return;
+      if (state.roundIndex === 0) state.roundIndex = 1;
+      else { state.phase = "final"; state.final = { step: "wagers", wagers: {}, results: {}, applied: false }; }
+      saveState(); renderGame();
+    }
+
+    function openClue(categoryIndex, clueIndex) {
+      const round = config.rounds[state.roundIndex];
+      const category = round.categories[categoryIndex];
+      const clue = category.clues[clueIndex];
+      activeClue = { roundIndex: state.roundIndex, categoryIndex, clueIndex, category, clue, wager: clue.value, playerId: null, historyStart: state.history.length, playStarted: false, revealed: false };
+      els.clueTitle.textContent = category.name;
+      els.clueValue.textContent = money(clue.value);
+      els.clueText.textContent = clue.clue;
+      els.answerBox.textContent = clue.answer;
+      els.answerBox.classList.remove("hidden"); els.revealBtn.classList.remove("hidden");
+      els.clueStatus.textContent = ""; els.clueScoring.innerHTML = "";
+      $("#clueUndoBtn").disabled = true;
+      els.dailySetup.innerHTML = ""; els.cluePlay.classList.add("hidden");
+      els.clueOverlay.classList.remove("hidden");
+      if (clue.dailyDouble) renderDailySetup(); else beginCluePlay();
+      notifyAudience();
+    }
+    function renderDailySetup() {
+      els.clueValue.textContent = "";
+      els.dailySetup.innerHTML = `<div class="daily-banner">DAILY DOUBLE!</div><p style="text-align:center">Choose the player who found the clue.</p><div class="choice-grid">${state.players.map(player => `<button class="btn large" type="button" data-player="${player.id}">${escapeHtml(player.name)}<br><span class="hint">${money(player.score)}</span></button>`).join("")}</div>`;
+      els.dailySetup.querySelectorAll("[data-player]").forEach(button => button.addEventListener("click", () => renderWager(Number(button.dataset.player))));
+      notifyAudience();
+    }
+    function renderWager(playerId) {
+      const player = state.players.find(item => item.id === playerId);
+      const boardMax = Math.max(...config.rounds[state.roundIndex].categories.flatMap(category => category.clues.map(clue => Number(clue.value))));
+      const max = Math.max(player.score, boardMax);
+      activeClue.playerId = playerId;
+      els.dailySetup.innerHTML = `<div class="daily-banner">DAILY DOUBLE!</div><div style="max-width:430px;margin:auto"><label for="dailyWager">${escapeHtml(player.name)}'s wager (5–${money(max)})</label><input id="dailyWager" type="number" min="5" max="${max}" step="1" value="${Math.min(activeClue.clue.value, max)}"><p id="dailyError" class="error"></p><button id="lockWagerBtn" class="btn primary large" type="button">Lock wager & show clue</button></div>`;
+      $("#lockWagerBtn").addEventListener("click", () => {
+        const wager = Number($("#dailyWager").value);
+        if (!Number.isInteger(wager) || wager < 5 || wager > max) { $("#dailyError").textContent = `Enter a whole-dollar wager from $5 to ${money(max)}.`; return; }
+        activeClue.wager = wager; els.clueValue.textContent = `Wager: ${money(wager)}`; beginCluePlay();
+      });
+    }
+    function beginCluePlay() {
+      activeClue.playStarted = true;
+      els.dailySetup.innerHTML = ""; els.cluePlay.classList.remove("hidden"); renderClueScoring(); notifyAudience();
+    }
+    function renderClueScoring() {
+      const players = activeClue.clue.dailyDouble ? state.players.filter(player => player.id === activeClue.playerId) : state.players;
+      els.clueScoring.innerHTML = players.map(player => `<div class="scoring-player"><strong>${escapeHtml(player.name)}</strong><div class="row"><button class="btn good" type="button" data-score="correct" data-player="${player.id}">Correct +${money(activeClue.wager).slice(1)}</button><button class="btn danger" type="button" data-score="wrong" data-player="${player.id}">Wrong −${money(activeClue.wager).slice(1)}</button></div></div>`).join("");
+      els.clueScoring.querySelectorAll("[data-score]").forEach(button => button.addEventListener("click", () => scoreClue(Number(button.dataset.player), button.dataset.score === "correct")));
+    }
+    function pushScoreChange(label, changes) {
+      const before = state.players.map(player => player.score);
+      changes.forEach(({ playerId, amount }) => { const player = state.players.find(item => item.id === playerId); if (player) player.score += amount; });
+      state.history.push({ label, before });
+      if (state.history.length > 100) state.history.shift();
+      saveState(); renderScores(); $("#undoBtn").disabled = false;
+    }
+    function scoreClue(playerId, correct) {
+      const player = state.players.find(item => item.id === playerId);
+      const amount = activeClue.wager * (correct ? 1 : -1);
+      pushScoreChange(`${player.name} ${correct ? "correct" : "incorrect"} (${money(amount)})`, [{ playerId, amount }]);
+      els.clueStatus.textContent = `${player.name}: ${correct ? "+" : "−"}${money(activeClue.wager).replace("−", "")}.`;
+      $("#clueUndoBtn").disabled = false;
+      if (activeClue.clue.dailyDouble) els.clueScoring.querySelectorAll("button").forEach(button => button.disabled = true);
+    }
+    function closeClue() {
+      if (!activeClue) return;
+      state.used[activeClue.roundIndex][activeClue.categoryIndex][activeClue.clueIndex] = true;
+      activeClue = null; els.clueOverlay.classList.add("hidden"); saveState(); renderGame();
+    }
+
+    // Prefer a local copy for offline play; otherwise use the source's MP3.
+    // Source: https://orangefreesounds.com/jeopardy-theme-song/ (private use only).
+    const finalMusic = new Audio();
+    finalMusic.preload = "auto";
+    finalMusic.loop = true;
+    finalMusic.volume = 0.65;
+    const FINAL_MUSIC_URL = "https://www.orangefreesounds.com/wp-content/uploads/2014/10/Jeopardy-theme-song.mp3";
+    finalMusic.src = "assets/jeopardy-theme-song.mp3";
+    let musicUnavailable = false;
+    let audienceFinal = null;
+    finalMusic.addEventListener("error", () => {
+      if (finalMusic.getAttribute("src") !== FINAL_MUSIC_URL) {
+        finalMusic.src = FINAL_MUSIC_URL;
+        if (finalSeconds(state?.final) > 0 && state?.phase === "final" && state.final.step === "clue") playFinalMusic();
+      } else {
+        musicUnavailable = true;
+        updateFinalClock();
+      }
+    });
+    function finalSeconds(final) {
+      return final?.endsAt ? Math.max(0, Math.ceil((final.endsAt - Date.now()) / 1000)) : 0;
+    }
+    function finalTimerMarkup(final) {
+      if (!final.endsAt) return "";
+      return `<div class="final-timer" role="timer" aria-label="Time remaining"><span id="finalCountdown"></span></div>${IS_AUDIENCE ? "" : '<div class="row" style="justify-content:center"><button id="finalMusicBtn" class="btn" type="button">Mute music</button><span id="finalMusicStatus" class="hint" role="status"></span></div>'}`;
+    }
+    function stopFinalMusic() {
+      finalMusic.pause();
+    }
+    function playFinalMusic() {
+      musicUnavailable = false;
+      finalMusic.play().then(() => updateFinalClock()).catch(() => {
+        musicUnavailable = true;
+        updateFinalClock();
+      });
+    }
+    function updateFinalClock() {
+      const final = IS_AUDIENCE ? audienceFinal : state?.phase === "final" ? state.final : null;
+      const seconds = finalSeconds(final);
+      const running = final?.step === "clue" && seconds > 0;
+      if (!IS_AUDIENCE && !running) stopFinalMusic();
+      const clock = $("#finalCountdown");
+      if (clock) {
+        clock.textContent = final?.step === "response" ? "Timer stopped" : seconds ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` : "Time’s up!";
+        clock.parentElement.classList.toggle("expired", seconds === 0);
+      }
+      const button = $("#finalMusicBtn");
+      if (button) {
+        button.disabled = !running;
+        button.textContent = musicUnavailable || finalMusic.paused ? "Play music" : finalMusic.muted ? "Unmute music" : "Mute music";
+        button.onclick = () => {
+          if (musicUnavailable || finalMusic.paused) playFinalMusic();
+          else finalMusic.muted = !finalMusic.muted;
+          updateFinalClock();
+        };
+      }
+      const status = $("#finalMusicStatus");
+      if (status) status.textContent = running && musicUnavailable ? "Music could not start. Click Play music to retry; the timer continues." : "";
+    }
+    setInterval(updateFinalClock, 200);
+
+    function renderFinal() {
+      els.stage.textContent = "Final Jeopardy!";
+      const final = state.final;
+      if (final.step === "wagers") {
+        const eligible = state.players.filter(player => player.score > 0);
+        const ineligible = state.players.filter(player => player.score <= 0);
+        els.boardArea.innerHTML = `<section class="panel"><h2 style="text-align:center">Final Jeopardy Category</h2><div class="final-category">${escapeHtml(config.finalJeopardy.category)}</div>${eligible.length ? `<p style="text-align:center">Enter each eligible player's wager. Players below $1,000 may wager up to $1,000.</p><div class="wager-grid">${eligible.map(player => { const max = finalWagerMax(player); return `<div class="wager-card"><label for="final-wager-${player.id}">${escapeHtml(player.name)} — max ${money(max)}</label><input id="final-wager-${player.id}" data-final-wager="${player.id}" type="number" min="0" max="${max}" step="1" value="0"><p class="error"></p></div>`; }).join("")}</div>` : `<p class="error" style="text-align:center">No player has a positive score. You can still reveal the clue, but no wagers will be scored.</p>`}${ineligible.length ? `<p class="hint">Not eligible (score must be positive): ${ineligible.map(p => escapeHtml(p.name)).join(", ")}</p>` : ""}<div class="row" style="justify-content:center"><button id="showFinalClueBtn" class="btn primary large" type="button">Lock wagers & show clue</button></div></section>`;
+        $("#showFinalClueBtn").addEventListener("click", lockFinalWagers);
+      } else {
+        const eligible = state.players.filter(player => Object.hasOwn(final.wagers, player.id));
+        els.boardArea.innerHTML = `<section class="panel"><h2 class="final-category">${escapeHtml(config.finalJeopardy.category)}</h2><div class="clue-text">${escapeHtml(config.finalJeopardy.clue)}</div>${finalTimerMarkup(final)}<div class="host-answer-label">Correct response · host only</div><div class="answer-box">${escapeHtml(config.finalJeopardy.answer)}</div><div class="row" style="justify-content:center"><button id="revealFinalBtn" class="btn primary large ${final.step === "response" ? "hidden" : ""}" type="button">Reveal response to audience</button></div><p style="text-align:center">Mark each response correct or incorrect. Scores are applied after every player is marked.</p><div class="scoring-grid">${eligible.map(player => { const result = final.results[player.id]; return `<div class="scoring-player"><strong>${escapeHtml(player.name)}</strong><div class="hint">Wager: ${money(final.wagers[player.id])}</div><div class="row"><button class="btn good" type="button" data-final-result="correct" data-player="${player.id}" ${result === true ? "disabled" : ""}>Correct${result === true ? " ✓" : ""}</button><button class="btn danger" type="button" data-final-result="wrong" data-player="${player.id}" ${result === false ? "disabled" : ""}>Incorrect${result === false ? " ✓" : ""}</button></div></div>`; }).join("")}</div><div class="row" style="justify-content:center"><button id="finishFinalBtn" class="btn primary large" type="button">Apply results & finish</button></div><p id="finalError" class="error" style="text-align:center"></p></section>`;
+        $("#revealFinalBtn")?.addEventListener("click", () => { final.step = "response"; stopFinalMusic(); saveState(); renderFinal(); });
+        els.boardArea.querySelectorAll("[data-final-result]").forEach(button => button.addEventListener("click", () => { final.results[button.dataset.player] = button.dataset.finalResult === "correct"; saveState(); renderFinal(); }));
+        $("#finishFinalBtn")?.addEventListener("click", finishFinal);
+      }
+      updateFinalClock();
+    }
+    function lockFinalWagers() {
+      const wagerInputs = [...document.querySelectorAll("[data-final-wager]")];
+      let valid = true;
+      const wagers = {};
+      wagerInputs.forEach(input => {
+        const player = state.players.find(item => item.id === Number(input.dataset.finalWager));
+        const wager = Number(input.value);
+        const max = finalWagerMax(player);
+        const error = input.nextElementSibling;
+        if (!Number.isInteger(wager) || wager < 0 || wager > max) { error.textContent = `Enter $0 to ${money(max)}.`; valid = false; }
+        else { error.textContent = ""; wagers[player.id] = wager; }
+      });
+      if (!valid) return;
+      state.final.wagers = wagers; state.final.step = "clue";
+      state.final.endsAt = Date.now() + 60000;
+      finalMusic.currentTime = 0; finalMusic.muted = false; playFinalMusic();
+      saveState(); renderFinal();
+    }
+    function finishFinal() {
+      const ids = Object.keys(state.final.wagers);
+      if (ids.some(id => typeof state.final.results[id] !== "boolean")) { $("#finalError").textContent = "Mark every eligible player correct or incorrect."; return; }
+      if (!state.final.applied) {
+        const changes = ids.map(id => ({ playerId: Number(id), amount: state.final.wagers[id] * (state.final.results[id] ? 1 : -1) }));
+        pushScoreChange("Final Jeopardy results", changes); state.final.applied = true;
+      }
+      stopFinalMusic();
+      state.phase = "complete"; saveState(); renderGame();
+    }
+    function renderResults() {
+      els.stage.textContent = "Final Scores";
+      const ranked = [...state.players].sort((a, b) => b.score - a.score);
+      const winners = ranked.filter(player => player.score === ranked[0].score);
+      els.boardArea.innerHTML = `<section class="panel"><h2 style="text-align:center">${winners.length > 1 ? `It's a tie: ${winners.map(p => escapeHtml(p.name)).join(" & ")}!` : `Congratulations, ${escapeHtml(winners[0].name)}!`}</h2><div class="standings">${ranked.map((player, index) => `<div class="standing"><span>${index + 1}. ${escapeHtml(player.name)}</span><span>${money(player.score)}</span></div>`).join("")}</div><div class="row" style="justify-content:center"><button id="resultsNewGameBtn" class="btn primary large" type="button">Set up another game</button></div></section>`;
+      $("#resultsNewGameBtn").addEventListener("click", requestNewGame);
+    }
+
+    function openAdjustments() {
+      els.manualList.innerHTML = state.players.map(player => `<div class="manual-row"><label for="adjust-${player.id}">${escapeHtml(player.name)} (${money(player.score)})</label><input id="adjust-${player.id}" data-adjust="${player.id}" type="number" step="1" value="0"></div>`).join("");
+      els.adjustReason.value = ""; els.adjustDialog.showModal();
+    }
+    function applyAdjustments(event) {
+      event.preventDefault();
+      const changes = [...document.querySelectorAll("[data-adjust]")].map(input => ({ playerId: Number(input.dataset.adjust), amount: Number(input.value) })).filter(change => Number.isFinite(change.amount) && change.amount !== 0);
+      if (changes.length) pushScoreChange(els.adjustReason.value.trim() || "Manual adjustment", changes);
+      els.adjustDialog.close(); renderGame();
+    }
+    function undoScore(fromClue = false) {
+      if (fromClue && (!activeClue || state.history.length <= activeClue.historyStart)) return;
+      const entry = state.history.pop(); if (!entry) return;
+      state.players.forEach((player, index) => { player.score = entry.before[index]; });
+      saveState(); renderGame();
+      if (activeClue) {
+        els.clueStatus.textContent = `Undid: ${entry.label}`;
+        $("#clueUndoBtn").disabled = state.history.length <= activeClue.historyStart;
+        renderClueScoring();
+      }
+    }
+    function requestNewGame() {
+      if (!confirm("Return to setup? The current saved game will be discarded.")) return;
+      localStorage.removeItem(STORAGE_KEY); state = null; config = structuredCloneSafe(config); showSetup();
+      notifyAudience();
+    }
+
+    function setDisplayStatus(message, connected = false) {
+      const status = $("#displayStatus");
+      if (!status) return;
+      status.textContent = message;
+      status.classList.toggle("connected", connected);
+    }
+    function launchAudienceDisplay() {
+      if (audienceWindow && !audienceWindow.closed) {
+        audienceWindow.focus();
+        notifyAudience();
+        return;
+      }
+      const url = new URL(location.href);
+      url.hash = "audience";
+      audienceWindow = window.open(url.href, "jeopardyAudience", "popup=yes,width=1280,height=800");
+      if (!audienceWindow) {
+        setDisplayStatus("Popup blocked — allow popups and try again");
+        return;
+      }
+      setDisplayStatus("Opening display…");
+    }
+    function makeAudienceSnapshot() {
+      if (!state) return null;
+      const snapshot = {
+        phase: state.phase,
+        players: state.players.map(({ name, score }) => ({ name, score }))
+      };
+      if (state.phase === "round") {
+        const round = config.rounds[state.roundIndex];
+        snapshot.round = {
+          name: round.name,
+          categories: round.categories.map((category, categoryIndex) => ({
+            name: category.name,
+            clues: category.clues.map((clue, clueIndex) => ({
+              value: clue.value,
+              used: state.used[state.roundIndex][categoryIndex][clueIndex]
+            }))
+          }))
+        };
+        if (activeClue) {
+          snapshot.active = activeClue.clue.dailyDouble && !activeClue.playStarted
+            ? {
+                type: "daily-double",
+                category: activeClue.category.name,
+                value: activeClue.clue.value
+              }
+            : {
+                type: "clue",
+                category: activeClue.category.name,
+                value: activeClue.wager,
+                clue: activeClue.clue.clue,
+                ...(activeClue.revealed ? { answer: activeClue.clue.answer } : {})
+              };
+        }
+      } else if (state.phase === "final") {
+        snapshot.final = {
+          category: config.finalJeopardy.category,
+          step: state.final.step,
+          endsAt: state.final.endsAt,
+          ...(state.final.step !== "wagers" ? { clue: config.finalJeopardy.clue } : {}),
+          ...(state.final.step === "response" ? { answer: config.finalJeopardy.answer } : {})
+        };
+      } else {
+        snapshot.ranked = [...state.players]
+          .sort((a, b) => b.score - a.score)
+          .map(({ name, score }) => ({ name, score }));
+      }
+      return snapshot;
+    }
+    function notifyAudience() {
+      if (IS_AUDIENCE || !audienceWindow || audienceWindow.closed) return;
+      audienceWindow.postMessage({ type: "jeopardy-state", snapshot: makeAudienceSnapshot() }, "*");
+    }
+    function renderAudience(snapshot) {
+      els.clueOverlay.classList.add("hidden");
+      els.setup.classList.add("hidden");
+      els.game.classList.remove("hidden");
+      els.game.querySelector(".toolbar").classList.add("hidden");
+      if (!snapshot) {
+        els.stage.textContent = "Audience Display";
+        els.scoreboard.innerHTML = "";
+        els.boardArea.innerHTML = `<section class="panel"><div class="clue-text"><span>Waiting for the host to start the game…</span></div></section>`;
+        return;
+      }
+      els.scoreboard.style.setProperty("--player-count", snapshot.players.length);
+      els.scoreboard.innerHTML = snapshot.players.map(player => `<div class="score-card"><div class="score-name">${escapeHtml(player.name)}</div><div class="score-value">${money(player.score)}</div></div>`).join("");
+      if (snapshot.phase === "round") renderAudienceRound(snapshot);
+      else if (snapshot.phase === "final") renderAudienceFinal(snapshot);
+      else renderAudienceResults(snapshot);
+    }
+    function renderAudienceRound(snapshot) {
+      els.stage.textContent = snapshot.round.name;
+      if (snapshot.active?.type === "daily-double") {
+        els.boardArea.innerHTML = `<section class="panel"><div class="modal-head"><h2 class="modal-title">${escapeHtml(snapshot.active.category)}</h2><div class="modal-title">${money(snapshot.active.value)}</div></div><div class="daily-banner">DAILY DOUBLE!</div></section>`;
+        return;
+      }
+      if (snapshot.active?.type === "clue") {
+        const active = snapshot.active;
+        els.boardArea.innerHTML = `<section class="panel"><div class="modal-head"><h2 class="modal-title">${escapeHtml(active.category)}</h2><div class="modal-title">${money(active.value)}</div></div><div class="clue-text">${escapeHtml(active.clue)}</div>${Object.hasOwn(active, "answer") ? `<div class="answer-box">${escapeHtml(active.answer)}</div>` : `<p class="hint" style="text-align:center">Waiting for the host to reveal the response</p>`}</section>`;
+        return;
+      }
+      const board = document.createElement("div");
+      board.className = "board";
+      board.style.setProperty("--category-count", snapshot.round.categories.length);
+      snapshot.round.categories.forEach(category => {
+        const heading = document.createElement("div");
+        heading.className = "category";
+        heading.textContent = category.name;
+        board.append(heading);
+      });
+      for (let clueIndex = 0; clueIndex < 5; clueIndex++) {
+        snapshot.round.categories.forEach(category => {
+          const clue = category.clues[clueIndex];
+          const tile = document.createElement("div");
+          tile.className = `clue-tile${clue.used ? " used" : ""}`;
+          tile.textContent = clue.used ? "" : money(clue.value);
+          board.append(tile);
+        });
+      }
+      els.boardArea.innerHTML = `<div class="board-wrap"></div>`;
+      els.boardArea.querySelector(".board-wrap").append(board);
+    }
+    function renderAudienceFinal(snapshot) {
+      els.stage.textContent = "Final Jeopardy!";
+      const final = snapshot.final;
+      audienceFinal = final;
+      if (final.step === "wagers") {
+        els.boardArea.innerHTML = `<section class="panel"><h2 style="text-align:center">Final Jeopardy Category</h2><div class="final-category">${escapeHtml(final.category)}</div><p class="hint" style="text-align:center">Waiting for wagers</p></section>`;
+        return;
+      }
+      els.boardArea.innerHTML = `<section class="panel"><h2 class="final-category">${escapeHtml(final.category)}</h2><div class="clue-text">${escapeHtml(final.clue)}</div>${finalTimerMarkup(final)}${Object.hasOwn(final, "answer") ? `<div class="answer-box">${escapeHtml(final.answer)}</div>` : `<p class="hint" style="text-align:center">Waiting for the host to reveal the response</p>`}</section>`;
+    }
+    function renderAudienceResults(snapshot) {
+      els.stage.textContent = "Final Scores";
+      const winners = snapshot.ranked.filter(player => player.score === snapshot.ranked[0].score);
+      els.boardArea.innerHTML = `<section class="panel"><h2 style="text-align:center">${winners.length > 1 ? `It's a tie: ${winners.map(player => escapeHtml(player.name)).join(" & ")}!` : `Congratulations, ${escapeHtml(winners[0].name)}!`}</h2><div class="standings">${snapshot.ranked.map((player, index) => `<div class="standing"><span>${index + 1}. ${escapeHtml(player.name)}</span><span>${money(player.score)}</span></div>`).join("")}</div></section>`;
+    }
+    function initializeAudience() {
+      document.body.classList.add("audience-mode");
+      document.title = "Jeopardy! — Audience Display";
+      renderAudience(null);
+      window.addEventListener("message", event => {
+        if (event.source !== window.opener || event.data?.type !== "jeopardy-state") return;
+        renderAudience(event.data.snapshot);
+      });
+      window.opener?.postMessage({ type: "jeopardy-audience-ready" }, "*");
+      window.addEventListener("beforeunload", () => window.opener?.postMessage({ type: "jeopardy-audience-closed" }, "*"));
+    }
+
+    $("#addPlayerBtn").addEventListener("click", () => { const names = playerNamesFromEditor(); if (names.length >= 12) return showSetupWarning("The player limit is 12."); renderPlayerEditor([...names, `Player ${names.length + 1}`]); validateSetupConfiguration(); });
+    els.playersEditor.addEventListener("input", validateSetupConfiguration);
+    $("#startBtn").addEventListener("click", startNewGame);
+    els.resumeBtn.addEventListener("click", () => { const saved = loadSaved(); if (!saved) return updateSavedGameControls(); config = saved.config; state = saved.state; showGame(); });
+    els.discardBtn.addEventListener("click", () => { if (confirm("Discard the saved game?")) { localStorage.removeItem(STORAGE_KEY); updateSavedGameControls(); } });
+    $("#revealBtn").addEventListener("click", () => { activeClue.revealed = true; els.revealBtn.classList.add("hidden"); notifyAudience(); });
+    $("#closeClueBtn").addEventListener("click", closeClue);
+    $("#clueUndoBtn").addEventListener("click", () => undoScore(true));
+    $("#rulesBtn").addEventListener("click", () => $("#rulesDialog").showModal());
+    $("#adjustBtn").addEventListener("click", openAdjustments);
+    $("#applyAdjustBtn").addEventListener("click", applyAdjustments);
+    $("#undoBtn").addEventListener("click", undoScore);
+    $("#newGameBtn").addEventListener("click", requestNewGame);
+    $("#launchDisplayBtn").addEventListener("click", launchAudienceDisplay);
+    $("#exportSaveBtn").addEventListener("click", () => downloadJson({ config, state }, "jeopardy-saved-game.json"));
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !els.clueOverlay.classList.contains("hidden")) event.preventDefault(); });
+
+    window.addEventListener("message", event => {
+      if (IS_AUDIENCE || event.source !== audienceWindow) return;
+      if (event.data?.type === "jeopardy-audience-ready") {
+        setDisplayStatus("Audience display connected", true);
+        notifyAudience();
+      } else if (event.data?.type === "jeopardy-audience-closed") {
+        setDisplayStatus("Display not connected");
+      }
+    });
+    if (!IS_AUDIENCE) {
+      setInterval(() => {
+        if (audienceWindow?.closed) {
+          audienceWindow = null;
+          setDisplayStatus("Display not connected");
+        }
+      }, 1000);
+    }
+
+    if (IS_AUDIENCE) initializeAudience();
+    else showSetup();
+  </script>
+</body>
+</html>
