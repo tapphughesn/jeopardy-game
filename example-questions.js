@@ -72,27 +72,27 @@ const TRIVIA_QUESTIONS = {
           "name": "Name That Classic",
           "clues": [
             {
-              "audio": "assets/classical-beethoven-symphony-5.mp3",
+              "audio": "assets/classical-clips/classical-beethoven-symphony-5.mp3",
               "answer": "What is Beethoven's Symphony No. 5?",
               "value": 100
             },
             {
-              "audio": "assets/classical-mozart-eine-kleine-nachtmusik.mp3",
+              "audio": "assets/classical-clips/classical-mozart-eine-kleine-nachtmusik.mp3",
               "answer": "What is Eine kleine Nachtmusik?",
               "value": 200
             },
             {
-              "audio": "assets/classical-grieg-mountain-king.mp3",
+              "audio": "assets/classical-clips/classical-grieg-mountain-king.mp3",
               "answer": "What is In the Hall of the Mountain King?",
               "value": 300
             },
             {
-              "audio": "assets/classical-strauss-blue-danube.mp3",
+              "audio": "assets/classical-clips/classical-strauss-blue-danube.mp3",
               "answer": "What is The Blue Danube?",
               "value": 400
             },
             {
-              "audio": "assets/classical-rossini-william-tell.mp3",
+              "audio": "assets/classical-clips/classical-rossini-william-tell.mp3",
               "answer": "What is the William Tell Overture?",
               "value": 500
             }
