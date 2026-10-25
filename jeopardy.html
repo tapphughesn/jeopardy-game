@@ -83,6 +83,7 @@
     .modal-head { display: flex; justify-content: space-between; align-items: start; gap: 15px; }
     .modal-title { color: var(--gold); text-transform: uppercase; letter-spacing: .04em; }
     .clue-text { display: grid; place-items: center; min-height: 190px; padding: 22px 10px; text-align: center; font-family: Georgia, serif; font-size: clamp(1.5rem, 4vw, 3rem); line-height: 1.25; }
+    .clue-audio { width: min(620px, 100%); margin-top: 18px; }
     .answer-box { margin: 10px 0 20px; padding: 18px; border: 2px solid var(--gold); border-radius: 10px; background: #060d2d; text-align: center; font-size: clamp(1.2rem, 2.5vw, 2rem); }
     .host-answer-label { margin: 18px 0 6px; color: var(--gold); text-align: center; font-size: .82rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
     .display-status { color: var(--muted); font-size: .85rem; font-weight: 700; }
@@ -375,7 +376,8 @@
         round.categories.forEach((category, c) => {
           if (!category.name || !Array.isArray(category.clues) || category.clues.length !== 5) fail(`Round ${r + 1}, category ${c + 1} needs a name and exactly five clues.`);
           category.clues.forEach((clue, q) => {
-            if (!clue.clue || !clue.answer) fail(`Missing clue or answer in round ${r + 1}, category ${c + 1}, row ${q + 1}.`);
+            if ((!clue.clue && !clue.audio) || !clue.answer) fail(`Missing clue content or answer in round ${r + 1}, category ${c + 1}, row ${q + 1}. Add clue text, an audio file, or both.`);
+            if (clue.audio != null && (typeof clue.audio !== "string" || !clue.audio.trim())) fail(`Audio in round ${r + 1}, category ${c + 1}, row ${q + 1} must be a non-empty file path or URL.`);
             if (Number(clue.value) !== expectedValues[r][q]) fail(`Round ${r + 1}, category ${c + 1}, row ${q + 1} must be worth ${expectedValues[r][q]}.`);
             if (clue.dailyDouble != null && typeof clue.dailyDouble !== "boolean") fail("dailyDouble must be true or false.");
           });
@@ -500,6 +502,31 @@
       saveState(); renderGame();
     }
 
+    function renderClueContent(container, clue) {
+      container.replaceChildren();
+      if (clue.clue) {
+        const text = document.createElement("div");
+        text.textContent = clue.clue;
+        container.append(text);
+      }
+      if (clue.audio) {
+        const audio = document.createElement("audio");
+        audio.className = "clue-audio";
+        audio.controls = true;
+        audio.preload = "metadata";
+        audio.src = clue.audio;
+        audio.setAttribute("aria-label", clue.clue ? `Audio for clue: ${clue.clue}` : "Audio clue");
+        container.append(audio);
+      }
+    }
+
+    function stopClueAudio() {
+      document.querySelectorAll(".clue-audio").forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+    }
+
     function openClue(categoryIndex, clueIndex) {
       const round = config.rounds[state.roundIndex];
       const category = round.categories[categoryIndex];
@@ -507,7 +534,7 @@
       activeClue = { roundIndex: state.roundIndex, categoryIndex, clueIndex, category, clue, wager: clue.value, playerId: null, historyStart: state.history.length, playStarted: false, revealed: false };
       els.clueTitle.textContent = category.name;
       els.clueValue.textContent = money(clue.value);
-      els.clueText.textContent = clue.clue;
+      renderClueContent(els.clueText, clue);
       els.answerBox.textContent = clue.answer;
       els.answerBox.classList.remove("hidden"); els.revealBtn.classList.remove("hidden");
       els.clueStatus.textContent = ""; els.clueScoring.innerHTML = "";
@@ -561,6 +588,7 @@
     }
     function closeClue() {
       if (!activeClue) return;
+      stopClueAudio();
       state.used[activeClue.roundIndex][activeClue.categoryIndex][activeClue.clueIndex] = true;
       activeClue = null; els.clueOverlay.classList.add("hidden"); saveState(); renderGame();
     }
@@ -757,6 +785,7 @@
                 category: activeClue.category.name,
                 value: activeClue.wager,
                 clue: activeClue.clue.clue,
+                ...(activeClue.clue.audio ? { audio: activeClue.clue.audio } : {}),
                 ...(activeClue.revealed ? { answer: activeClue.clue.answer } : {})
               };
         }
@@ -804,7 +833,8 @@
       }
       if (snapshot.active?.type === "clue") {
         const active = snapshot.active;
-        els.boardArea.innerHTML = `<section class="panel"><div class="modal-head"><h2 class="modal-title">${escapeHtml(active.category)}</h2><div class="modal-title">${money(active.value)}</div></div><div class="clue-text">${escapeHtml(active.clue)}</div>${Object.hasOwn(active, "answer") ? `<div class="answer-box">${escapeHtml(active.answer)}</div>` : `<p class="hint" style="text-align:center">Waiting for the host to reveal the response</p>`}</section>`;
+        els.boardArea.innerHTML = `<section class="panel"><div class="modal-head"><h2 class="modal-title">${escapeHtml(active.category)}</h2><div class="modal-title">${money(active.value)}</div></div><div class="clue-text"></div>${Object.hasOwn(active, "answer") ? `<div class="answer-box">${escapeHtml(active.answer)}</div>` : `<p class="hint" style="text-align:center">Waiting for the host to reveal the response</p>`}</section>`;
+        renderClueContent(els.boardArea.querySelector(".clue-text"), active);
         return;
       }
       const board = document.createElement("div");

@@ -69,31 +69,31 @@ const TRIVIA_QUESTIONS = {
           ]
         },
         {
-          "name": "Musical Instruments",
+          "name": "Name That Classic",
           "clues": [
             {
-              "clue": "A standard modern version of this keyboard instrument has 88 keys.",
-              "answer": "What is a piano?",
+              "audio": "assets/classical-beethoven-symphony-5.mp3",
+              "answer": "What is Beethoven's Symphony No. 5?",
               "value": 100
             },
             {
-              "clue": "This six-string instrument is commonly played by strumming or plucking.",
-              "answer": "What is a guitar?",
+              "audio": "assets/classical-mozart-eine-kleine-nachtmusik.mp3",
+              "answer": "What is Eine kleine Nachtmusik?",
               "value": 200
             },
             {
-              "clue": "This brass instrument changes pitch using a long sliding section of tubing.",
-              "answer": "What is a trombone?",
+              "audio": "assets/classical-grieg-mountain-king.mp3",
+              "answer": "What is In the Hall of the Mountain King?",
               "value": 300
             },
             {
-              "clue": "This double-reed woodwind typically gives the tuning note to an orchestra.",
-              "answer": "What is an oboe?",
+              "audio": "assets/classical-strauss-blue-danube.mp3",
+              "answer": "What is The Blue Danube?",
               "value": 400
             },
             {
-              "clue": "This electronic instrument is played by moving the hands near two antennas without touching them.",
-              "answer": "What is a theremin?",
+              "audio": "assets/classical-rossini-william-tell.mp3",
+              "answer": "What is the William Tell Overture?",
               "value": 500
             }
           ]
