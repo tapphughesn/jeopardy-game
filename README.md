@@ -27,3 +27,21 @@ autoplay, and playback stops when the host returns to the board.
 
 MP3 is the safest format across current browsers. OGG and WAV support depends on
 the browser. Only use audio you have permission to download and play.
+
+### Image clues
+
+Put image files in `assets/`, then add an `image` property to a clue. The clue
+text is optional when an image is present:
+
+```js
+{
+  "image": "assets/landmarks/eiffel-tower.jpg",
+  "imageAlt": "A tall iron lattice tower viewed from across a river",
+  "answer": "What is the Eiffel Tower?",
+  "value": 400
+}
+```
+
+`imageAlt` is optional but recommended for accessibility. Images are scaled to
+fit the clue window without cropping and appear in both host and audience views.
+Text, `image`, and `audio` can also be combined in the same clue.

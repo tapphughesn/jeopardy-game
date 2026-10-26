@@ -9,3 +9,7 @@ Music loops until the 60-second timer expires or the host reveals the response.
 Other audio files in this folder can be used as clues. Reference them from a clue
 with a relative path such as `"audio": "assets/name-that-song.mp3"`. See the main
 README for a complete clue example.
+
+Images can also be used as clues with a relative path such as
+`"image": "assets/landmarks/eiffel-tower.jpg"`. See the main README for the
+optional accessible alt-text field and a complete example.

@@ -82,8 +82,9 @@
     .modal.wide { width: min(1150px, 100%); }
     .modal-head { display: flex; justify-content: space-between; align-items: start; gap: 15px; }
     .modal-title { color: var(--gold); text-transform: uppercase; letter-spacing: .04em; }
-    .clue-text { display: grid; place-items: center; min-height: 190px; padding: 22px 10px; text-align: center; font-family: Georgia, serif; font-size: clamp(1.5rem, 4vw, 3rem); line-height: 1.25; }
-    .clue-audio { width: min(620px, 100%); margin-top: 18px; }
+    .clue-text { display: grid; place-items: center; gap: 18px; min-height: 190px; padding: 22px 10px; text-align: center; font-family: Georgia, serif; font-size: clamp(1.5rem, 4vw, 3rem); line-height: 1.25; }
+    .clue-image { display: block; max-width: min(800px, 100%); max-height: 52vh; object-fit: contain; border-radius: 10px; }
+    .clue-audio { width: min(620px, 100%); }
     .answer-box { margin: 10px 0 20px; padding: 18px; border: 2px solid var(--gold); border-radius: 10px; background: #060d2d; text-align: center; font-size: clamp(1.2rem, 2.5vw, 2rem); }
     .host-answer-label { margin: 18px 0 6px; color: var(--gold); text-align: center; font-size: .82rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
     .display-status { color: var(--muted); font-size: .85rem; font-weight: 700; }
@@ -389,8 +390,10 @@
         round.categories.forEach((category, c) => {
           if (!category.name || !Array.isArray(category.clues) || category.clues.length !== 5) fail(`Round ${r + 1}, category ${c + 1} needs a name and exactly five clues.`);
           category.clues.forEach((clue, q) => {
-            if ((!clue.clue && !clue.audio) || !clue.answer) fail(`Missing clue content or answer in round ${r + 1}, category ${c + 1}, row ${q + 1}. Add clue text, an audio file, or both.`);
+            if ((!clue.clue && !clue.audio && !clue.image) || !clue.answer) fail(`Missing clue content or answer in round ${r + 1}, category ${c + 1}, row ${q + 1}. Add clue text, an audio file, an image, or a combination.`);
             if (clue.audio != null && (typeof clue.audio !== "string" || !clue.audio.trim())) fail(`Audio in round ${r + 1}, category ${c + 1}, row ${q + 1} must be a non-empty file path or URL.`);
+            if (clue.image != null && (typeof clue.image !== "string" || !clue.image.trim())) fail(`Image in round ${r + 1}, category ${c + 1}, row ${q + 1} must be a non-empty file path or URL.`);
+            if (clue.imageAlt != null && typeof clue.imageAlt !== "string") fail(`Image alt text in round ${r + 1}, category ${c + 1}, row ${q + 1} must be text.`);
             if (Number(clue.value) !== expectedValues[r][q]) fail(`Round ${r + 1}, category ${c + 1}, row ${q + 1} must be worth ${expectedValues[r][q]}.`);
             if (clue.dailyDouble != null && typeof clue.dailyDouble !== "boolean") fail("dailyDouble must be true or false.");
           });
@@ -521,6 +524,13 @@
         const text = document.createElement("div");
         text.textContent = clue.clue;
         container.append(text);
+      }
+      if (clue.image) {
+        const image = document.createElement("img");
+        image.className = "clue-image";
+        image.src = clue.image;
+        image.alt = clue.imageAlt || "Image clue";
+        container.append(image);
       }
       if (clue.audio) {
         const audio = document.createElement("audio");
@@ -798,6 +808,7 @@
                 category: activeClue.category.name,
                 value: activeClue.wager,
                 clue: activeClue.clue.clue,
+                ...(activeClue.clue.image ? { image: activeClue.clue.image, imageAlt: activeClue.clue.imageAlt } : {}),
                 ...(activeClue.clue.audio ? { audio: activeClue.clue.audio } : {}),
                 ...(activeClue.revealed ? { answer: activeClue.clue.answer } : {})
               };
