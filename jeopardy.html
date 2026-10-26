@@ -347,10 +347,23 @@
       updateSavedGameControls();
       notifyAudience();
     }
+    function migrateSavedAssetPaths(savedConfig) {
+      let changed = false;
+      savedConfig.rounds?.forEach(round => round.categories?.forEach(category => category.clues?.forEach(clue => {
+        if (typeof clue.audio === "string" && /^assets\/classical-[^/]+\.mp3$/.test(clue.audio)) {
+          clue.audio = clue.audio.replace("assets/", "assets/classical-clips/");
+          changed = true;
+        }
+      })));
+      return changed;
+    }
     function loadSaved() {
       try {
         const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (!parsed?.config || !parsed?.state) return null;
+        if (migrateSavedAssetPaths(parsed.config)) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        }
         validateConfig(parsed.config);
         return parsed;
       } catch { return null; }
