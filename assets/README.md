@@ -13,3 +13,11 @@ README for a complete clue example.
 Images can also be used as clues with a relative path such as
 `"image": "assets/landmarks/eiffel-tower.jpg"`. See the main README for the
 optional accessible alt-text field and a complete example.
+
+The decorative `vatican-basilica.jpg` image is a CC0 photograph by Gary Todd,
+downloaded from Wikimedia Commons:
+https://commons.wikimedia.org/wiki/File:Vatican_St._Peter%27s_Basilica_%289808792896%29.jpg
+
+The `vatican-symbol.svg` title emblem is the public-domain 2023 Vatican City
+flag from Wikimedia Commons:
+https://commons.wikimedia.org/wiki/File:Flag_of_the_Vatican_City.svg
