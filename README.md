@@ -1,11 +1,53 @@
 ## Jeopardy Game
 
 Edit `questions.js` in the same format as `example-questions.js` and point `jeopardy.html` at it.
-Run `open jeopardy.html`. 
+Open `jeopardy.html` directly for the standard game without automatic buzzer integration.
 Edit the configuration to your liking.
 Set up the audience view and screen share it with your friend(s).
-Buzz functionality is not included here, you need an external tool for that.
 Have fun!
+
+### Optional BuzzIn.live integration
+
+Automatic clue hiding is optional. The game works normally when `jeopardy.html` is
+opened directly.
+
+For automatic hiding, install the local dependencies once:
+
+```bash
+npm install
+```
+
+Then start the game with:
+
+```bash
+npm start
+```
+
+This launches a dedicated Chrome profile with the Jeopardy host and BuzzIn host
+tabs, then monitors BuzzIn locally. Keep the terminal running during the game.
+When the first player buzzes, only the audience clue is hidden. Clicking BuzzIn's
+clear/reset control restores the clue so other players can buzz. Daily Doubles,
+Final Jeopardy, the board, and the host's clue are never hidden. If the helper
+disconnects, the clue is restored and remains visible.
+
+The dedicated profile is stored in `.buzzin-chrome-profile/` and is intentionally
+separate from the normal Chrome profile. If Chrome is installed somewhere unusual,
+set `CHROME_PATH` to its executable before running `npm start`.
+
+Run the local automated tests with:
+
+```bash
+npm test
+```
+
+The opt-in smoke test against the real BuzzIn.live service is:
+
+```bash
+npm run test:real-buzzin
+```
+
+That external test may need updating if BuzzIn changes its interface; the normal
+test suite uses a local BuzzIn fixture and does not contact the service.
 
 ### Audio clues
 

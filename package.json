@@ -1,0 +1,23 @@
+{
+  "name": "vatican-jeopardy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/launcher.ts",
+    "bridge": "tsx src/bridge.ts",
+    "build": "tsc --noEmit",
+    "test": "playwright test",
+    "test:real-buzzin": "BUZZIN_REAL_E2E=1 playwright test tests/buzzin-real.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/chrome-remote-interface": "^0.33.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "chrome-remote-interface": "^0.33.3"
+  }
+}
