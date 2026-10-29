@@ -62,6 +62,7 @@ test("a buzz hides only the audience clue and clearing restores it", async ({ br
 test("the game remains fully usable without the optional bridge", async ({ page }) => {
   await page.goto(gameUrl);
   await expect(page.locator("#buzzStatus")).toHaveText("BuzzIn automation off (optional)");
+  await expect(page.locator("#openBuzzInBtn")).toHaveAttribute("href", "https://buzzin.live/host");
   await page.getByRole("button", { name: "Start new game" }).click();
   await page.locator("button.clue-tile").first().click();
   await expect(page.locator("#clueText")).toContainText("macabre poet");

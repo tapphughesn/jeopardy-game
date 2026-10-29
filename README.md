@@ -23,16 +23,17 @@ Then start the game with:
 npm start
 ```
 
-This launches a dedicated Chrome profile with the Jeopardy host and BuzzIn host
-tabs, then monitors BuzzIn locally. Keep the terminal running during the game.
+This launches a temporary dedicated Chrome session with the Jeopardy host. Click **Open
+BuzzIn host** in the Jeopardy toolbar when you are ready; the helper automatically
+detects the new tab and begins monitoring it. Keep the terminal running during the game.
 When the first player buzzes, only the audience clue is hidden. Clicking BuzzIn's
 clear/reset control restores the clue so other players can buzz. Daily Doubles,
 Final Jeopardy, the board, and the host's clue are never hidden. If the helper
 disconnects, the clue is restored and remains visible.
 
-The dedicated profile is stored in `.buzzin-chrome-profile/` and is intentionally
-separate from the normal Chrome profile. If Chrome is installed somewhere unusual,
-set `CHROME_PATH` to its executable before running `npm start`.
+The temporary browser session closes when you stop the helper and does not modify
+your normal Chrome profile. If Chrome is installed somewhere unusual, set
+`CHROME_PATH` to its executable before running `npm start`.
 
 Run the local automated tests with:
 

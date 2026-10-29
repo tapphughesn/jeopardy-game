@@ -50,6 +50,8 @@ export interface BridgeOptions {
   signal?: AbortSignal;
 }
 
+export type MonitorOptions = Omit<BridgeOptions, "endpoint">;
+
 export async function isJeopardyHost(page: BridgePage): Promise<boolean> {
   if (page.url().includes("#audience")) return false;
   try {
@@ -101,7 +103,7 @@ export class BuzzInBridge {
       return;
     }
     if (!this.buzzPage) {
-      await sendToJeopardy(this.hostPage, { type: "disconnected", reason: "BuzzIn host tab not found" });
+      await sendToJeopardy(this.hostPage, { type: "disconnected", reason: "open the BuzzIn host tab to connect" });
       this.reportProblem("Waiting for the BuzzIn host tab");
       return;
     }
@@ -206,12 +208,17 @@ function cdpConnection(endpoint: string): { host: string; port: number } {
 
 export async function runBridge(options: BridgeOptions = {}): Promise<void> {
   const endpoint = options.endpoint ?? "http://127.0.0.1:9222";
+  const log = options.log ?? (message => console.log(`[buzz-bridge] ${message}`));
+  const browser = new CdpBrowser(cdpConnection(endpoint));
+  log(`Connected to Chrome at ${endpoint}`);
+  await monitorBridge(browser, options);
+}
+
+export async function monitorBridge(browser: BridgeBrowser, options: MonitorOptions = {}): Promise<void> {
   const pollMs = options.pollMs ?? 250;
   const buzzinUrlPrefix = options.buzzinUrlPrefix ?? "https://buzzin.live/host";
   const log = options.log ?? (message => console.log(`[buzz-bridge] ${message}`));
-  const browser = new CdpBrowser(cdpConnection(endpoint));
   const bridge = new BuzzInBridge(browser, { buzzinUrlPrefix, log });
-  log(`Connected to Chrome at ${endpoint}`);
 
   try {
     while (!options.signal?.aborted) {
@@ -219,7 +226,7 @@ export async function runBridge(options: BridgeOptions = {}): Promise<void> {
       await new Promise(resolve => setTimeout(resolve, pollMs));
     }
   } finally {
-    await browser.close();
+    await browser.close?.();
   }
 }
 

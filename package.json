@@ -18,6 +18,7 @@
     "typescript": "^5.9.0"
   },
   "dependencies": {
-    "chrome-remote-interface": "^0.33.3"
+    "chrome-remote-interface": "^0.33.3",
+    "playwright-core": "^1.64.1"
   }
 }

@@ -1,12 +1,10 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { runBridge } from "./bridge.js";
+import { chromium, type Browser, type Page } from "playwright-core";
+import { monitorBridge, type BridgeBrowser, type BridgePage } from "./bridge.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const profilePath = join(projectRoot, ".buzzin-chrome-profile");
-const endpoint = "http://127.0.0.1:9222";
 
 function chromeExecutable(): string {
   const candidates = [
@@ -22,47 +20,63 @@ function chromeExecutable(): string {
   return executable;
 }
 
-async function waitForChrome(child: ChildProcess): Promise<void> {
-  const deadline = Date.now() + 20_000;
-  while (Date.now() < deadline) {
-    if (child.exitCode != null) throw new Error(`Chrome exited early with code ${child.exitCode}`);
-    try {
-      const response = await fetch(`${endpoint}/json/version`);
-      if (response.ok) return;
-    } catch {
-      // Chrome is still starting.
-    }
-    await new Promise(resolve => setTimeout(resolve, 250));
+class PlaywrightBridgePage implements BridgePage {
+  constructor(private readonly page: Page) {}
+
+  url(): string {
+    return this.page.url();
   }
-  throw new Error("Timed out waiting for Chrome's local debugging connection.");
+
+  async evaluate<T>(expression: string): Promise<T> {
+    return this.page.evaluate<T>(expression);
+  }
+}
+
+class PlaywrightBridgeBrowser implements BridgeBrowser {
+  private readonly wrappers = new Map<Page, PlaywrightBridgePage>();
+
+  constructor(private readonly browser: Browser) {}
+
+  async pages(): Promise<BridgePage[]> {
+    const pages = this.browser.contexts().flatMap(context => context.pages()).filter(page => !page.isClosed());
+    const active = new Set(pages);
+    for (const page of this.wrappers.keys()) {
+      if (!active.has(page)) this.wrappers.delete(page);
+    }
+    return pages.map(page => {
+      let wrapper = this.wrappers.get(page);
+      if (!wrapper) {
+        wrapper = new PlaywrightBridgePage(page);
+        this.wrappers.set(page, wrapper);
+      }
+      return wrapper;
+    });
+  }
+
+  async close(): Promise<void> {
+    await this.browser.close();
+  }
 }
 
 async function main(): Promise<void> {
-  mkdirSync(profilePath, { recursive: true });
-  const gameUrl = pathToFileURL(join(projectRoot, "jeopardy.html")).href;
-  const chrome = spawn(chromeExecutable(), [
-    "--remote-debugging-address=127.0.0.1",
-    "--remote-debugging-port=9222",
-    `--user-data-dir=${profilePath}`,
-    "--no-first-run",
-    "--no-default-browser-check",
-    "--new-window",
-    gameUrl,
-    "https://buzzin.live/host"
-  ], { stdio: "ignore" });
+  const browser = await chromium.launch({
+    executablePath: chromeExecutable(),
+    headless: false,
+    args: ["--no-first-run", "--no-default-browser-check"]
+  });
+  const context = await browser.newContext({ viewport: null });
+  const gamePage = await context.newPage();
+  await gamePage.goto(pathToFileURL(join(projectRoot, "jeopardy.html")).href);
 
   const controller = new AbortController();
-  const stop = () => {
-    controller.abort();
-    if (chrome.exitCode == null) chrome.kill("SIGTERM");
-  };
+  const stop = () => controller.abort();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
-  await waitForChrome(chrome);
-  console.log("Jeopardy and BuzzIn are open in a dedicated Chrome window.");
+  console.log("Jeopardy is open in a dedicated Chrome window. Use its Open BuzzIn host button when ready.");
   console.log("Keep this terminal running while you use automatic buzz hiding. Press Ctrl+C to stop.");
-  await runBridge({ endpoint, signal: controller.signal });
+  console.log("[buzz-bridge] Connected through Chrome's local automation pipe.");
+  await monitorBridge(new PlaywrightBridgeBrowser(browser), { signal: controller.signal });
 }
 
 main().catch(error => {
