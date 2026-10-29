@@ -112,6 +112,16 @@
     .audience-mode .clue-text { min-height: 42vh; font-size: clamp(2rem, 5vw, 4.8rem); }
     .audience-mode .answer-box { font-size: clamp(1.8rem, 4vw, 3.8rem); }
     .audience-mode .clue-tile { cursor: default; }
+    body.audience-mode { height: 100vh; height: 100dvh; overflow: hidden; }
+    .audience-mode .app { height: 100%; padding-block: 10px; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+    .audience-mode .topbar { margin-bottom: 10px; padding-block: 8px 10px; }
+    .audience-mode #gameScreen:not(.hidden) { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+    .audience-mode .scoreboard { margin-bottom: 10px; }
+    .audience-mode #boardArea { min-height: 0; overflow: hidden; }
+    .audience-mode #boardArea > .panel { height: 100%; min-height: 0; overflow: hidden; }
+    .audience-mode .board-wrap, .audience-mode .board { height: 100%; min-height: 0; }
+    .audience-mode .board { grid-template-rows: minmax(64px, .85fr) repeat(5, minmax(0, 1fr)); }
+    .audience-mode .category, .audience-mode .clue-tile { min-height: 0; }
     .scoring-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 16px 0; }
     .scoring-player { border: 1px solid #435cae; border-radius: 10px; background: #0a1233; padding: 12px; text-align: center; }
     .scoring-player .row { justify-content: center; margin-top: 8px; }
@@ -843,7 +853,8 @@
       }
       const url = new URL(location.href);
       url.hash = "audience";
-      audienceWindow = window.open(url.href, "jeopardyAudience", "popup=yes,width=1280,height=800");
+      const popupHeight = Math.min(900, Math.max(800, screen.availHeight - 80));
+      audienceWindow = window.open(url.href, "jeopardyAudience", `popup=yes,width=1280,height=${popupHeight}`);
       if (!audienceWindow) {
         setDisplayStatus("Popup blocked — allow popups and try again");
         return;

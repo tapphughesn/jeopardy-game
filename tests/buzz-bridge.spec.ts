@@ -29,10 +29,12 @@ test("a buzz hides only the audience clue and clearing restores it", async ({ br
   await host.getByRole("button", { name: "Launch audience display" }).click();
   const audience = await audiencePromise;
   await audience.waitForLoadState();
+  await expect.poll(() => audience.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
 
   await host.locator("button.clue-tile").first().click();
   await expect(host.locator("#clueText")).toContainText("macabre poet");
   await expect(audience.locator("#boardArea .clue-text")).toContainText("macabre poet");
+  await expect.poll(() => audience.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
 
   const bridge = new BuzzInBridge(bridgeBrowser(browser), {
     buzzinUrlPrefix: mockBuzzUrl,
