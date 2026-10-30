@@ -86,9 +86,10 @@
     .category, .clue-tile { display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(145deg, #0a2b9c, #061c71); border: 2px solid #173fa8; }
     .category { min-height: 92px; padding: 12px 8px 8px; color: var(--vatican-ivory); font-weight: 900; text-transform: uppercase; text-shadow: 2px 2px #000; overflow-wrap: anywhere; box-shadow: inset 0 4px 0 var(--vatican-yellow); }
     .category:nth-child(even) { box-shadow: inset 0 4px 0 var(--vatican-ivory); }
-    .clue-tile { min-height: clamp(72px, 9vw, 116px); color: var(--gold); font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(1.7rem, 4vw, 3.6rem); text-shadow: 3px 3px #000; border-radius: 0; }
+    .clue-tile { position: relative; min-height: clamp(72px, 9vw, 116px); color: var(--gold); font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(1.7rem, 4vw, 3.6rem); text-shadow: 3px 3px #000; border-radius: 0; }
     .clue-tile:hover:not(:disabled) { background: #164bd0; filter: none; transform: none; }
     .clue-tile.used { color: transparent; background: #06165a; border-color: #112878; box-shadow: none; }
+    .daily-double-marker { position: absolute; top: 5px; right: 6px; padding: 2px 5px; color: #171000; background: var(--gold); border-radius: 4px; font: 900 .68rem/1.2 Inter, sans-serif; letter-spacing: .04em; text-shadow: none; }
     .round-footer { display: flex; justify-content: center; margin-top: 16px; }
     .overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 18px; background: rgba(0, 3, 15, .88); backdrop-filter: blur(4px); }
     .modal { width: min(950px, 100%); max-height: calc(100vh - 36px); overflow-y: auto; background: #0b1748; border: 3px solid var(--vatican-bronze); border-radius: 17px; padding: clamp(18px, 4vw, 40px); box-shadow: 0 24px 80px #000; }
@@ -119,6 +120,11 @@
     .audience-mode .scoreboard { margin-bottom: 10px; }
     .audience-mode #boardArea { min-height: 0; overflow: hidden; }
     .audience-mode #boardArea > .panel { height: 100%; min-height: 0; overflow: hidden; }
+    .audience-mode #boardArea > .panel.has-clue-timer { display: flex; flex-direction: column; }
+    .audience-mode .timed-clue-content { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(8px, 1.3vh, 16px); }
+    .audience-mode .timed-clue-content > .clue-text { min-height: 0; padding-block: 8px; }
+    .audience-mode .timed-clue-content > .clue-timer { flex: 0 0 auto; margin: 0 auto; }
+    .audience-mode .timed-clue-content > .hint { margin: 0; }
     .audience-mode .board-wrap, .audience-mode .board { height: 100%; min-height: 0; }
     .audience-mode .board { grid-template-rows: minmax(64px, .85fr) repeat(5, minmax(0, 1fr)); }
     .audience-mode .category, .audience-mode .clue-tile { min-height: 0; }
@@ -127,6 +133,14 @@
     .scoring-player .row { justify-content: center; margin-top: 8px; }
     .daily-banner { color: var(--gold); font: 900 clamp(2rem, 8vw, 5rem)/1 Georgia, serif; text-align: center; text-shadow: 4px 4px #000; padding: 20px 5px; }
     .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .clue-timer-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 4px 0 18px; }
+    .clue-timer-controls .timer-label { color: var(--muted); font-weight: 800; }
+    .clue-timer-status { min-width: 7.5rem; color: var(--gold); font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
+    .clue-timer { --timer-progress: 100%; position: relative; display: grid; place-items: center; width: clamp(90px, 13vw, 150px); aspect-ratio: 1; margin: 0 auto 18px; border-radius: 50%; background: conic-gradient(var(--gold) var(--timer-progress), rgba(255,255,255,.14) 0); box-shadow: 0 5px 20px #0008; }
+    .clue-timer::before { content: ""; position: absolute; width: 76%; aspect-ratio: 1; border-radius: 50%; background: #09143d; box-shadow: inset 0 0 18px #0009; }
+    .clue-timer-icon { position: relative; z-index: 1; font-size: clamp(2.4rem, 6vw, 4.8rem); line-height: 1; filter: drop-shadow(2px 3px 1px #0008); }
+    .clue-timer.expired { background: conic-gradient(#ff7777 100%, #ff7777 0); }
+    .clue-timer-status.expired { color: #ff7777; }
     .final-timer { text-align: center; color: var(--gold); font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; font-variant-numeric: tabular-nums; margin: 16px 0; }
     .final-timer.expired { color: #ff7777; }
     .final-category { color: var(--gold); text-align: center; font: 800 clamp(1.8rem, 5vw, 3.5rem)/1.2 Georgia, serif; padding: 26px 10px; }
@@ -221,6 +235,13 @@
       <div id="dailySetup"></div>
       <div id="cluePlay" class="hidden">
         <div id="clueText" class="clue-text"></div>
+        <div class="clue-timer-controls" aria-label="Audience response timer controls">
+          <span class="timer-label">Player timer:</span>
+          <button class="btn" type="button" data-clue-timer="5">5 seconds</button>
+          <button class="btn" type="button" data-clue-timer="10">10 seconds</button>
+          <button class="btn" type="button" data-clue-timer="30">30 seconds</button>
+          <span id="clueTimerHostCountdown" class="clue-timer-status" role="timer" aria-live="polite">Not started</span>
+        </div>
         <div class="host-answer-label">Correct response · host only</div>
         <div id="answerBox" class="answer-box"></div>
         <div class="row" style="justify-content:center">
@@ -354,6 +375,8 @@
     let state = null;
     let activeClue = null;
     let audienceWindow = null;
+    let audienceClueTimerEndsAt = null;
+    let audienceClueTimerDuration = null;
     const buzzBridge = { connected: false, armed: false, lastSeen: 0, clueHidden: false, clueKey: null };
 
     function structuredCloneSafe(value) { return JSON.parse(JSON.stringify(value)); }
@@ -528,9 +551,9 @@
           const clue = category.clues[clueIndex];
           const used = state.used[state.roundIndex][categoryIndex][clueIndex];
           const button = document.createElement("button");
-          button.type = "button"; button.className = `clue-tile${used ? " used" : ""}`; button.disabled = used;
-          button.textContent = used ? "" : money(clue.value);
-          button.setAttribute("aria-label", used ? `${category.name} for ${clue.value}, used` : `${category.name} for ${clue.value}`);
+          button.type = "button"; button.className = `clue-tile${used ? " used" : ""}${clue.dailyDouble ? " daily-double-host" : ""}`; button.disabled = used;
+          button.innerHTML = used ? "" : `${money(clue.value)}${clue.dailyDouble ? '<span class="daily-double-marker" aria-hidden="true">DD</span>' : ""}`;
+          button.setAttribute("aria-label", used ? `${category.name} for ${clue.value}, used${clue.dailyDouble ? ", Daily Double" : ""}` : `${category.name} for ${clue.value}${clue.dailyDouble ? ", Daily Double" : ""}`);
           button.addEventListener("click", () => openClue(categoryIndex, clueIndex));
           board.append(button);
         });
@@ -541,8 +564,6 @@
       $("#nextRoundBtn").addEventListener("click", advanceRound);
     }
     function advanceRound() {
-      const remaining = state.used[state.roundIndex].flat().filter(value => !value).length;
-      if (remaining && !confirm(`${remaining} clue${remaining === 1 ? " remains" : "s remain"}. Continue anyway?`)) return;
       if (state.roundIndex === 0) state.roundIndex = 1;
       else { state.phase = "final"; state.final = { step: "wagers", wagers: {}, results: {}, applied: false }; }
       saveState(); renderGame();
@@ -584,7 +605,7 @@
       const round = config.rounds[state.roundIndex];
       const category = round.categories[categoryIndex];
       const clue = category.clues[clueIndex];
-      activeClue = { roundIndex: state.roundIndex, categoryIndex, clueIndex, category, clue, wager: clue.value, playerId: null, historyStart: state.history.length, playStarted: false, revealed: false };
+      activeClue = { roundIndex: state.roundIndex, categoryIndex, clueIndex, category, clue, wager: clue.value, playerId: null, historyStart: state.history.length, playStarted: false, revealed: false, timerEndsAt: null, timerDuration: null };
       resetBuzzHiddenClue();
       els.clueTitle.textContent = category.name;
       els.clueValue.textContent = money(clue.value);
@@ -618,8 +639,39 @@
     }
     function beginCluePlay() {
       activeClue.playStarted = true;
-      els.dailySetup.innerHTML = ""; els.cluePlay.classList.remove("hidden"); renderClueScoring(); notifyAudience();
+      els.dailySetup.innerHTML = ""; els.cluePlay.classList.remove("hidden"); renderClueScoring(); updateClueClock(); notifyAudience();
     }
+    function clueTimerSeconds(endsAt) {
+      return endsAt ? Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)) : null;
+    }
+    function clueTimerText(endsAt) {
+      const seconds = clueTimerSeconds(endsAt);
+      if (seconds === null) return "Not started";
+      return seconds > 0 ? `${seconds} second${seconds === 1 ? "" : "s"}` : "Time’s up!";
+    }
+    function startClueTimer(seconds) {
+      if (!activeClue?.playStarted) return;
+      activeClue.timerEndsAt = Date.now() + seconds * 1000;
+      activeClue.timerDuration = seconds;
+      updateClueClock();
+      notifyAudience();
+    }
+    function updateClueClock() {
+      const endsAt = IS_AUDIENCE ? audienceClueTimerEndsAt : activeClue?.timerEndsAt;
+      const clock = $(IS_AUDIENCE ? "#clueTimerCountdown" : "#clueTimerHostCountdown");
+      if (!clock) return;
+      const seconds = clueTimerSeconds(endsAt);
+      if (IS_AUDIENCE) {
+        const durationMs = audienceClueTimerDuration * 1000;
+        const progress = durationMs ? Math.max(0, Math.min(100, ((endsAt - Date.now()) / durationMs) * 100)) : 0;
+        clock.style.setProperty("--timer-progress", `${progress}%`);
+        clock.setAttribute("aria-label", `Response timer: ${clueTimerText(endsAt)}`);
+      } else {
+        clock.textContent = clueTimerText(endsAt);
+      }
+      clock.classList.toggle("expired", seconds === 0);
+    }
+    setInterval(updateClueClock, 200);
     function renderClueScoring() {
       const players = activeClue.clue.dailyDouble ? state.players.filter(player => player.id === activeClue.playerId) : state.players;
       els.clueScoring.innerHTML = players.map(player => `<div class="scoring-player"><strong>${escapeHtml(player.name)}</strong><div class="row"><button class="btn good" type="button" data-score="correct" data-player="${player.id}">Correct +${money(activeClue.wager).slice(1)}</button><button class="btn danger" type="button" data-score="wrong" data-player="${player.id}">Wrong −${money(activeClue.wager).slice(1)}</button></div></div>`).join("");
@@ -836,7 +888,8 @@
       if (detail.type !== "buzz") return;
 
       buzzBridge.armed = false;
-      const canHide = state?.phase === "round" && activeClue?.playStarted && !activeClue.clue.dailyDouble && !activeClue.revealed;
+      const timerFinished = activeClue?.timerEndsAt && Date.now() >= activeClue.timerEndsAt;
+      const canHide = state?.phase === "round" && activeClue?.playStarted && !activeClue.clue.dailyDouble && !activeClue.revealed && !timerFinished;
       if (!canHide) {
         setBuzzStatus("Buzz detected · no eligible clue to hide", "connected");
         return;
@@ -895,6 +948,8 @@
                 ...(hideForBuzz ? { buzzHidden: true } : { clue: activeClue.clue.clue }),
                 ...(!hideForBuzz && activeClue.clue.image ? { image: activeClue.clue.image, imageAlt: activeClue.clue.imageAlt } : {}),
                 ...(!hideForBuzz && activeClue.clue.audio ? { audio: activeClue.clue.audio } : {}),
+                ...(!hideForBuzz && activeClue.timerEndsAt ? { timerEndsAt: activeClue.timerEndsAt } : {}),
+                ...(!hideForBuzz && activeClue.timerDuration ? { timerDuration: activeClue.timerDuration } : {}),
                 ...(activeClue.revealed ? { answer: activeClue.clue.answer } : {})
               };
         }
@@ -918,6 +973,8 @@
       audienceWindow.postMessage({ type: "jeopardy-state", snapshot: makeAudienceSnapshot() }, "*");
     }
     function renderAudience(snapshot) {
+      audienceClueTimerEndsAt = null;
+      audienceClueTimerDuration = null;
       els.clueOverlay.classList.add("hidden");
       els.setup.classList.add("hidden");
       els.game.classList.remove("hidden");
@@ -942,9 +999,14 @@
       }
       if (snapshot.active?.type === "clue") {
         const active = snapshot.active;
-        els.boardArea.innerHTML = `<section class="panel"${active.buzzHidden ? ' data-buzz-hidden="true"' : ""}><div class="modal-head"><h2 class="modal-title">${escapeHtml(active.category)}</h2><div class="modal-title">${money(active.value)}</div></div><div class="clue-text"></div>${Object.hasOwn(active, "answer") ? `<div class="answer-box">${escapeHtml(active.answer)}</div>` : `<p class="hint" style="text-align:center">Waiting for the host to reveal the response</p>`}</section>`;
+        audienceClueTimerEndsAt = active.timerEndsAt || null;
+        audienceClueTimerDuration = active.timerDuration || null;
+        const timerMarkup = active.timerEndsAt ? '<div id="clueTimerCountdown" class="clue-timer" role="timer" aria-live="polite"><span class="clue-timer-icon" aria-hidden="true">⌛</span></div>' : "";
+        const responseMarkup = Object.hasOwn(active, "answer") ? `<div class="answer-box">${escapeHtml(active.answer)}</div>` : `<p class="hint" style="text-align:center">Waiting for the host to reveal the response</p>`;
+        els.boardArea.innerHTML = `<section class="panel${active.timerEndsAt ? " has-clue-timer" : ""}"${active.buzzHidden ? ' data-buzz-hidden="true"' : ""}><div class="modal-head"><h2 class="modal-title">${escapeHtml(active.category)}</h2><div class="modal-title">${money(active.value)}</div></div><div class="${active.timerEndsAt ? "timed-clue-content" : ""}"><div class="clue-text"></div>${timerMarkup}${responseMarkup}</div></section>`;
         if (active.buzzHidden) els.boardArea.querySelector(".clue-text").innerHTML = '<div class="buzz-hidden-message">Buzz!</div>';
         else renderClueContent(els.boardArea.querySelector(".clue-text"), active);
+        updateClueClock();
         return;
       }
       const board = document.createElement("div");
@@ -1001,6 +1063,7 @@
     els.resumeBtn.addEventListener("click", () => { const saved = loadSaved(); if (!saved) return updateSavedGameControls(); config = saved.config; state = saved.state; showGame(); });
     els.discardBtn.addEventListener("click", () => { if (confirm("Discard the saved game?")) { localStorage.removeItem(STORAGE_KEY); updateSavedGameControls(); } });
     $("#revealBtn").addEventListener("click", () => { activeClue.revealed = true; els.revealBtn.classList.add("hidden"); notifyAudience(); });
+    document.querySelectorAll("[data-clue-timer]").forEach(button => button.addEventListener("click", () => startClueTimer(Number(button.dataset.clueTimer))));
     $("#closeClueBtn").addEventListener("click", closeClue);
     $("#clueUndoBtn").addEventListener("click", () => undoScore(true));
     $("#rulesBtn").addEventListener("click", () => $("#rulesDialog").showModal());

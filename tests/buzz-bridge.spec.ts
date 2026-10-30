@@ -34,6 +34,8 @@ test("a buzz hides only the audience clue and clearing restores it", async ({ br
   await host.locator("button.clue-tile").first().click();
   await expect(host.locator("#clueText")).toContainText("macabre poet");
   await expect(audience.locator("#boardArea .clue-text")).toContainText("macabre poet");
+  await host.getByRole("button", { name: "30 seconds" }).click();
+  await expect(audience.locator("#clueTimerCountdown")).toBeVisible();
   await expect.poll(() => audience.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
 
   const bridge = new BuzzInBridge(bridgeBrowser(browser), {
@@ -50,12 +52,14 @@ test("a buzz hides only the audience clue and clearing restores it", async ({ br
 
   await expect(audience.locator("[data-buzz-hidden='true']")).toBeVisible();
   await expect(audience.locator("#boardArea .clue-text")).toHaveText("Buzz!");
+  await expect(audience.locator("#clueTimerCountdown")).toHaveCount(0);
   await expect(host.locator("#clueText")).toContainText("macabre poet");
 
   await buzz.locator(".rankBadge--first").evaluate(element => element.remove());
   await bridge.tick();
   await expect(audience.locator("[data-buzz-hidden='true']")).toHaveCount(0);
   await expect(audience.locator("#boardArea .clue-text")).toContainText("macabre poet");
+  await expect(audience.locator("#clueTimerCountdown")).toBeVisible();
   await context.close();
 });
 
@@ -90,5 +94,27 @@ test("buzz events never hide a Daily Double", async ({ browser }) => {
   });
   await expect(audience.locator("[data-buzz-hidden='true']")).toHaveCount(0);
   await expect(audience.locator("#boardArea .clue-text")).toContainText("Before Vatican City");
+  await context.close();
+});
+
+test("buzz events do not hide a clue after its response timer expires", async ({ browser }) => {
+  const context = await browser.newContext();
+  const host = await context.newPage();
+  await host.goto(gameUrl);
+  await host.getByRole("button", { name: "Start new game" }).click();
+  const audiencePromise = context.waitForEvent("page");
+  await host.getByRole("button", { name: "Launch audience display" }).click();
+  const audience = await audiencePromise;
+  await audience.waitForLoadState();
+
+  await host.locator("button.clue-tile:not(.daily-double-host)").first().click();
+  await host.getByRole("button", { name: "5 seconds" }).click();
+  await expect(host.locator("#clueTimerHostCountdown")).toHaveText("Time’s up!", { timeout: 6500 });
+
+  await host.evaluate(() => {
+    window.dispatchEvent(new CustomEvent("jeopardy-buzz-bridge", { detail: { type: "buzz" } }));
+  });
+  await expect(audience.locator("[data-buzz-hidden='true']")).toHaveCount(0);
+  await expect(audience.locator("#boardArea .clue-text")).toContainText("macabre poet");
   await context.close();
 });
